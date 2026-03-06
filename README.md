@@ -1,46 +1,213 @@
-1. Proiectul MIPS cu Pipeline
-Acest document oferă o descriere detaliată a proiectului MIPS cu pipeline pe 32 de biți, inclusiv componentele folosite, funcționalitatea acestora, instrucțiunile implementate și semnalele de control.
+MIPS32 Pipeline Processor (VHDL)
+Descriere proiect
+Acest proiect implementează un procesor MIPS32 cu arhitectură pipeline pe 32 de biți, realizat în VHDL. Scopul proiectului este simularea și testarea unui procesor care execută instrucțiuni în paralel folosind tehnica instruction pipelining.
+Procesorul este construit modular și include unități separate pentru:
+•	extragerea instrucțiunilor
+•	decodare
+•	execuție
+•	acces la memorie
+•	scriere înapoi în registre
+Proiectul a fost realizat și testat folosind Xilinx Vivado, iar componentele au fost verificate atât în simulare, cât și pe placă FPGA.
 
-2. Componente folosite și funcționalitatea acestora
-2.1 Generator de Monopuls Sincron (MPG.vhd)
-•	Descriere: Generează un impuls sincron la o apăsare de buton.
-•	Funcționalitate: Utilizează un numărător și 3 bistabile D Flip-Flop pentru a produce un impuls de o singură dată când un buton este apăsat.
-2.2 Afișaj pe 7 segmente (SSD.vhd)
-•	Descriere: Afișează cifrele pe un display de 7 segmente.
-•	Funcționalitate: Folosește 7 LED-uri active (catozi) pentru a afișa cifrele. Catozii sunt comuni tuturor afișoarelor, iar afișajul este realizat prin activarea alternativă a diferitelor segmente.
-2.3 Unitatea de extragere a instrucțiunilor (IFetch.vhd)
-•	Descriere: Extrage instrucțiunile din memoria de instrucțiuni.
-•	Funcționalitate: Primește adresele de salt și pune la dispoziție adresa următoare (PC+4) și conținutul instrucțiunii curente. Include o memorie ROM cu instrucțiuni predefinite pentru testare.
-2.4 Unitatea de decodificare a instrucțiunilor (ID.vhd)
-•	Descriere: Decodează instrucțiunile pentru a putea fi executate.
-•	Funcționalitate: Primește instrucțiunea curentă și valoarea WD, care se scrie în RF. Pune la ieșire operanzii RD1, RD2, imediatul extins Ext_Imm, câmpurile function și sa. Include un registru de Registrare (RF) cu scriere sincronă.
-2.5 Unitatea de control (UC.vhd)
-•	Descriere: Generează semnalele de control pentru unitățile din calea de date.
-•	Funcționalitate: Determină funcționalitatea unităților în funcție de tipul de instrucțiune. Generează semnale precum RegDst, ExtOp, ALUSrc, Branch, Jump, ALUOp, MemWrite, MemtoReg și RegWrite.
-2.6 Unitatea de execuție (EX.vhd)
-•	Descriere: Realizează operațiile aritmetice și logice necesare instrucțiunii.
-•	Funcționalitate: Primește registrele RD1 și RD2, imediatul extins Ext_imm și adresa de instrucțiune următoare PC+4. Pune la dispoziție rezultatul ALU, semnalul de validare Zero și adresa de salt condiționat.
-2.7 Unitatea de memorie (MEM.vhd)
-•	Descriere: Stocare a datelor.
-•	Funcționalitate: Scrierea în memorie este sincronă pe frontul de ceas ascendent, iar citirea este asincronă. Include o memorie RAM cu valori predefinite pentru testare.
-2.8 Arhitectura completă a procesorului 
-•	Descriere: Asamblează întregul procesor folosind componentele enumerate anterior.
-•	Funcționalitate: Integrează toate componentele pentru a forma un procesor funcțional. Implementează registri pentru stocarea stadiilor pipeline-ului și include un multiplexor pentru alegerea surselor de date pentru afișaj.
-3. Registri pentru stocarea stadiilor pipeline-ului
-3.1 PC (Program Counter)
-•	Descriere: Registru special care conține adresa instrucțiunii următoare care va fi preluată.
-•	Funcționalitate: Actualizează adresa următoare în funcție de starea de execuție (PC+4, salt condiționat sau incondiționat).
-3.2 IF/ID (Instruction Fetch/Instruction Decode)
-•	Descriere: Registru de transfer care stochează instrucțiunea preluată din memoria de instrucțiuni și alte informații relevante pentru decodare.
-•	Funcționalitate: Păstrează valoarea curentă a PC și instrucțiunea citită pentru a fi folosită în etapa de decodare.
-3.3 ID/EX (Instruction Decode/Execution)
-•	Descriere: Registru de transfer care conține datele decodate ale instrucțiunii și semnalele de control necesare pentru etapa de execuție.
-•	Funcționalitate: Păstrează operanzii RD1, RD2, imediatul extins, câmpurile function și sa, precum și semnalele de control pentru unitatea de execuție.
-3.4 EX/MEM (Execution/Memory Access)
-•	Descriere: Registru de transfer care stochează rezultatele etapei de execuție și semnalele de control asociate accesului la memorie.
-•	Funcționalitate: Păstrează rezultatul ALU, semnalul Zero, adresa de salt condiționat și semnalele de control pentru accesul la memorie.
-3.5 MEM/WB (Memory Access/Write Back)
-•	Descriere: Registru de transfer care conține datele și semnalele de control pentru accesul la memorie și operațiile de scriere înapoi în registrele de destinație.
-•	Funcționalitate: Păstrează datele citite din memorie sau rezultatele ALU pentru a le scrie înapoi în registrele de destinație.
-•	Toate componentele enumerate sunt funcționale, fără a prezenta probleme de funcționare. Acestea au fost testate integral pe plăcuță.
-Pe parcursul dezvoltării proiectului au apărut diverse probleme de proiectare, cum ar fi atribuirea incorectă a unor valori, rezolvarea greșită a hazardurilor, calcularea greșită a adresei de jump si a offset-ului la BEQ sau erori în implementarea programului MIPS32. Aceste probleme au fost identificate și remediate treptat. Programul din IFetch nu se execută complet corect.
+Arhitectura procesorului
+Procesorul este organizat pe 5 stadii pipeline:
+1.	IF – Instruction Fetch
+2.	ID – Instruction Decode
+3.	EX – Execute
+4.	MEM – Memory Access
+5.	WB – Write Back
+Între aceste stadii există registre pipeline care stochează rezultatele intermediare.
+
+Componente și funcționalitate
+1. Generator de Monopuls Sincron (MPG.vhd)
+Descriere
+Generează un impuls sincron la apăsarea unui buton.
+Funcționalitate
+•	utilizează un numărător
+•	folosește 3 bistabile D Flip-Flop
+•	produce un singur impuls pentru fiecare apăsare de buton
+Acest modul este utilizat pentru controlul execuției pe placa FPGA.
+
+2. Afișaj pe 7 segmente (SSD.vhd)
+Descriere
+Permite afișarea valorilor numerice pe un display cu 7 segmente.
+Funcționalitate
+•	utilizează 7 LED-uri active
+•	catozii sunt comuni pentru toate afișajele
+•	afișarea se realizează prin multiplexarea segmentelor
+
+3. Instruction Fetch Unit (IFetch.vhd)
+Descriere
+Responsabilă pentru extragerea instrucțiunilor din memoria de instrucțiuni.
+Funcționalitate
+•	calculează PC + 4
+•	gestionează instrucțiuni de branch și jump
+•	furnizează:
+o	instrucțiunea curentă
+o	adresa următoarei instrucțiuni
+Include:
+•	ROM cu instrucțiuni predefinite pentru testare.
+
+4. Instruction Decode Unit (ID.vhd)
+Descriere
+Decodează instrucțiunile și pregătește datele pentru execuție.
+Funcționalitate
+Primește:
+•	instrucțiunea curentă
+•	datele de scriere în registre (WD)
+Produce:
+•	RD1
+•	RD2
+•	Ext_Imm (imediat extins)
+•	câmpurile function
+•	sa (shift amount)
+Include:
+•	Register File (RF) cu scriere sincronă.
+
+5. Control Unit (UC.vhd)
+Descriere
+Generează semnalele de control pentru calea de date a procesorului.
+Funcționalitate
+Semnalele generate includ:
+•	RegDst
+•	ExtOp
+•	ALUSrc
+•	Branch
+•	Jump
+•	ALUOp
+•	MemWrite
+•	MemtoReg
+•	RegWrite
+Acestea determină modul de execuție al fiecărei instrucțiuni.
+
+6. Execution Unit (EX.vhd)
+Descriere
+Realizează operațiile aritmetice și logice ale instrucțiunilor.
+Funcționalitate
+Primește:
+•	RD1
+•	RD2
+•	Ext_Imm
+•	PC + 4
+Produce:
+•	rezultatul ALU
+•	semnalul Zero
+•	adresa pentru branch
+
+7. Memory Unit (MEM.vhd)
+Descriere
+Unitatea responsabilă pentru stocarea datelor.
+Funcționalitate
+•	scriere sincronă la frontul ascendent al ceasului
+•	citire asincronă
+Include:
+•	RAM cu valori predefinite pentru testare.
+
+8. Arhitectura completă a procesorului
+Descriere
+Integrează toate modulele într-un procesor pipeline complet.
+Funcționalitate
+•	conectează toate unitățile funcționale
+•	implementează registre pipeline
+•	include multiplexor pentru selectarea datelor afișate pe display
+
+Registrele Pipeline
+Pentru implementarea execuției pipeline sunt utilizate registre între stadii.
+PC (Program Counter)
+Descriere
+Registru special care stochează adresa următoarei instrucțiuni.
+Funcționalitate
+Actualizează adresa în funcție de:
+•	PC + 4
+•	branch
+•	jump
+
+IF/ID Register
+Descriere
+Registru de transfer între stadiile Instruction Fetch și Instruction Decode.
+Funcționalitate
+Stochează:
+•	instrucțiunea curentă
+•	valoarea PC
+
+ID/EX Register
+Descriere
+Registru între stadiile Decode și Execute.
+Funcționalitate
+Stochează:
+•	RD1
+•	RD2
+•	Ext_Imm
+•	function
+•	sa
+•	semnale de control pentru EX
+
+EX/MEM Register
+Descriere
+Registru între stadiile Execute și Memory.
+Funcționalitate
+Stochează:
+•	rezultatul ALU
+•	semnalul Zero
+•	adresa de branch
+•	semnale de control pentru MEM
+
+MEM/WB Register
+Descriere
+Registru între stadiile Memory și Write Back.
+Funcționalitate
+Stochează:
+•	datele citite din memorie
+•	rezultatul ALU
+•	semnale pentru scrierea în registri
+
+Testarea proiectului
+Toate componentele au fost testate:
+•	în Vivado Simulator
+•	pe placa FPGA
+În timpul dezvoltării au apărut probleme precum:
+•	atribuirea incorectă a unor semnale
+•	rezolvarea greșită a hazardurilor
+•	calcularea incorectă a adreselor jump
+•	calcularea incorectă a offset-ului pentru BEQ
+•	erori în implementarea programului MIPS
+Aceste probleme au fost identificate și corectate progresiv.
+Programul din IFetch nu se execută complet corect în forma actuală.
+
+Instrucțiuni MIPS32 implementate
+Procesorul suportă un subset al instrucțiunilor MIPS32, incluzând:
+R-Type
+•	add
+•	sub
+•	and
+•	or
+•	sll
+•	srl
+I-Type
+•	addi
+•	lw
+•	sw
+•	beq
+J-Type
+•	jump
+
+Schema procesorului Pipeline
+Procesorul utilizează arhitectura pipeline clasică MIPS cu 5 stadii:
+IF → ID → EX → MEM → WB
+Fiecare stadiu execută simultan o parte diferită a instrucțiunii.
+
+RTL Design
+Proiectul este realizat la nivel RTL (Register Transfer Level) și include:
+•	registre pipeline
+•	unitate ALU
+•	memorie de instrucțiuni
+•	memorie de date
+•	multiplexoare
+•	unitate de control
+
+Tehnologii utilizate
+•	VHDL
+•	MIPS32 Architecture
+•	RTL Design
+•	Xilinx Vivado
+•	FPGA
